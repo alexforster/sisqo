@@ -1,0 +1,23 @@
+.py[oc]
+dist
+*.egg-info
+
+# JetBrains
+.idea
+
+# Virtualenv
+env
+
+# Mac OS X
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+
+# Thumbnails
+._*
+
