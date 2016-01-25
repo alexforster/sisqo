@@ -11,7 +11,7 @@ from setuptools import setup
 
 
 PACKAGE_NAME = 'sisqo'
-PACKAGE_VERSION = '1.0.1'
+PACKAGE_VERSION = '1.0.2'
 
 setup(
     name=PACKAGE_NAME,
@@ -31,6 +31,10 @@ setup(
         'LICENSE',
         'requirements.txt',
     ]},
+    install_requires=[
+        'paramiko<2.0.0',
+        'pyte<0.6.0',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
