@@ -49,8 +49,8 @@ class SSH:
         self._port = int(port)
         """:type: int"""
 
-        self._proxyCommand = str(proxyCommand)
-        """:type: str"""
+        self._proxyCommand = str(proxyCommand) if proxyCommand else None
+        """:type: str|None"""
 
         self._proxySocket = None
         """:type: paramiko.ProxyCommand"""
