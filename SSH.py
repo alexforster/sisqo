@@ -218,7 +218,17 @@ class SSH:
 
             if not expectingMore:
 
-                lines = buf[-1].splitlines() if len(buf) > 0 else []
+                lines = []
+
+                if len(buf) > 0:
+
+                    tmpBuf = buf[-1]
+                    i = 2
+                    while len(buf) > i and '\n' not in tmpBuf:
+                        tmpBuf = buf[-i] + tmpBuf
+                        i += 1
+
+                    lines = tmpBuf.splitlines()
 
                 if len(lines) > 0:
 
