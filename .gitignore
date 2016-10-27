@@ -1,6 +1,7 @@
-.py[oc]
+*.py[oc]
 dist
 *.egg-info
+test.py
 
 # JetBrains
 .idea

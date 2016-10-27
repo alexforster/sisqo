@@ -1,26 +1,32 @@
-## Sisqo – Cisco SSH automation library
+# Sisqo
+
+**Author:** Alex Forster (alex@alexforster.com)<br/>
+**License:** BSD 3-Clause<br/>
 
 ### Overview
 
-Sisqo is a library for automating the management of Cisco devices via SSH.
+Sisqo is a better library for automating network gear with Cisco-style command line interfaces.
 
-#### Features
+### Features
 
- * Runs on any UNIX-style platform that has vty support, with no dependencies on OpenSSH or SSH agents
- * Emulates OpenSSH-style `ProxyCommand` support, allowing the library to traverse jumpboxes
- * Supports SSH pubkey authentication with no dependency on the user's `.ssh` profile, complimenting the `ProxyCommand` feature by attempting both password-based and pubkey-based authentication at each hop
- * Complete support for VT100 series terminal emulation, guaranteeing that what you see on the command line will also be what you receive from this library
+ * Provides a fluid API for parsing `running-config` and `startup-config` into strongly typed hierarchical objects that can be traversed with regex-based searching
+ * Complete support for VT100-series terminal emulation, guaranteeing that what you see on the command line will also be what you receive from this library
  * Automatically handles Cisco-style "more" pagination and prompt matching, allowing for seamless `read()`/`write()` semantics regardless of the target device's terminal settings
  * Provides special API support for `enable` authorization
- * Provides a fluid API for parsing `running-config` and `startup-config` into strongly typed hierarchical objects that can be traversed with regex-based searching
+ * Runs on any platform that has the OpenSSH binary installed
  * Tested against Cisco IOS, Catalyst, Nexus, ASA/PIX, and ASR series devices
 
-#### Usage
+### Installation
 
-To use the Sisqo library, you must have a recent version of the `pip` Python package manager. First, `git clone` this repository into a local directory. Open a shell at the repository path, and `pip install -r requirements.txt` to install Sisqo's runtime dependencies.
+`pip install sisqo` 
 
-At this point, you may copy the Sisqo repository folder into your Python project and `import Sisqo` to begin using the library.
+**PyPI:** [https://pypi.python.org/pypi/sisqo/2.0.0](https://pypi.python.org/pypi/sisqo/2.0.0)
 
+**Dependencies:**
+
+ * `ptyprocess` – a library for launching a subprocess in a pseudo terminal (pty)
+ * `pyte` – an in memory VTXXX-compatible terminal emulator library
+ * `wcwidth` – a library for wide-character width calculation
 
 ## API Documentation
 
@@ -31,140 +37,224 @@ from sys import exit
 
 import sisqo
 
-router = sisqo.SSH( host='router.example.com',
-                    proxyCommand='ssh -W %h:%p jdoe@jumpbox.example.com' )
+router = sisqo.SSH(host='router.example.com', username='jdoe')
 
 with router:
 
-    if not router.authenticate(
-        username='cisco',
-        password='cisco',
-        privateKeyFile='~/.ssh/id_rsa',
-        privateKeyPassword='password123' ):
+    if not router.connect('password123'):
         
-        exit( 1 )  # could not authenticate with the router
+        exit(1)  # could not authenticate with the router
 
-    if not router.enable( password='cisco' ):
+    if not router.enable('123456'):
     
-        exit( 2 )  # could not enable on the router
+        exit(2)  # could not enable on the router
 
-    router.write( 'show version' )
-    versionInformation = router.read()
-
-    print( 'Router version:' )
-    print( versionInformation )  # Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M) ...
+    router.write('show version')
+    versionInformation = router.read()  #= "Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M) ..."
+    print(versionInformation)
 
     runningConfig = router.showRunningConfig()
 
-    bgpConfig = runningConfig.findChild( 'router bgp \d+' )
+	# hostname router1
+	# !
+	# interface GigabitEthernet0/0
+	#   shutdown
+	# interface GigabitEthernet0/1
+	#   shutdown
+	# !
+	# router bgp 12345
+	#   network 55.66.77.88/24
+	#   neighbor 11.22.33.44
+	#     remote-as 54321
+	#     timers 7 21
+	#   neighbor 22.33.44.55
+	#     remote-as 98765
+	#     timers 7 21
 
-    bgpNeighbors = bgpConfig.findChildren( 'neighbor .+' )
+    routerBGP = runningConfig.findChild('router bgp \d+').value  #= "router bgp 12345"
+    asn = int(routerBGP.split()[-1])  #= 12345
+    
+    print('BGP neighbors of ASN {}'.format(asn))
+    
+    bgpNeighbors = bgpConfig.findChild('router bgp \d+').findChildren('neighbor .+') 
 
-    print( 'BGP neighbors of ASN %s:' %(bgpConfig.value.split()[2]) )  # BGP neighbors of ASN 12345:
+    for neighbor in bgpNeighbors:  #= [<neighbor 11.22.33.44>, <neighbor 22.33.44.55>]
     
-    for neighbor in bgpNeighbors:
-    
-        ipAddress = neighbor.value.split()[1]
-        print( ipAddress )  # 11.22.33.44
-
-    router.write( 'write memory' )
-    wrMemResult = router.read()
-    
-    if '[ok]' not in wrMemResult.lower():
-    
-        exit( 3 )  # could not save the running-config to the router
-
-exit( 0 )
+        ipAddress = neighbor.value  #= "neighbor 11.22.33.44"
+        ipAddress = ipAddress.split()[-1]  #= "11.22.33.44"
+        
+        print("Neighbor: {}".format(ipAddress))
 ```
 
 ### class _SSH_
 
-*_Note_: this class must be used as a context manager (using a "with" statement)*
+*Note: this class can be used as a context manager (using a "with" statement)*
 
- * **constructor ( _host_: str, _port_: int?, _proxyCommand_: str? )**
+ * **\_\_init\_\_ ( _username_: str, _host_: str, _port_: int?, _sshConfigFile_: str? )**
 
-   Creates an object that can be used to SSH into the provided `host`/`port` and issue commands. To proxy through a jumpbox, provide an OpenSSH-style `proxyCommand`.
+   Creates an object that initiates an SSH connection as `username` to the provided `host` and `port` (default: *22*).
+   
+   The OpenSSH client, by default, will obey the system's `/etc/ssh/ssh_config` file as well as the current user's `~/.ssh/config` file. You can provide a path to [a custom ssh_config file](http://man.openbsd.org/ssh_config) using the `sshConfigFile` argument, which will prevent these default configuration files from being considered.
 
- * **readonly property _host_: str** – hostname or IP address to SSH into
+ * **_host_: readonly str**
 
- * **readonly property _port_: int** – port number to SSH into
+   Hostname or IP address to SSH into
 
- * **readonly property _proxyCommand_: str | None** – SSH command used to connect to the jumpbox
+ * **_port_: readonly int**
 
- * **method _authenticate_ ( _username_: str, _password_: str?, _privateKeyFile_: str?, _privateKeyPassword_: str? ): bool**
+   Port number to connect to
 
-   Initiates an SSH connection to the target device, trying the specified private key and proxying through intermediate jumpboxes if necessary.
+ * **_promptRegex_: str**
 
- * **method _read_ ( _timeout_: int?, _promptRegex_: str?, _moreRegex_: str?, _stripPrompt_: bool? ): str**
+   Regular Expression used to match shell prompts
 
-   Reads from the target device up to the next prompt, with special handling for Cisco-style pagination. If a prompt cannot be matched in the output, the read operation returns after `timeout` seconds. The `stripPrompt` argument can be used to control whether or not the text of the prompt is returned as part of the read operation.
+ * **_moreRegex_: str**
 
- * **method _write_ ( _command_: str , _consumeEcho_: bool? )**
+   Regular Expression used to match Cisco-style "more" pagination prompts
 
-   Writes `command` to the target device. By default, this function expects the device to echo back `command`. If `consumeEcho` is True (the default), this function will implicitly consume the data that is echoed back. When responding to password prompts, you should set `consumeEcho` to False to avoid unintentionally consuming data.
+ * **_authenticate_ ( _password_: str?, _passphrase_: str?, _promptCallback_: lambda?, _promptState_: dict? )**
 
-   *_Warning_: this function implicitly reads any previously unread data without returning it to the consumer.*
+   Allows the user to reliably respond to an authentication prompt (`password` and/or private key `passphrase`) if necessary.
+   
+   This method also provides a convenient way to handle alternative prompts, for situations where something other than a password or passphrase are required (for example, a TOTP multi-factor challenge code).
+   
+   The `promptCallback` parameter should be a function that responds to the alternative prompt. It will be called repeatedly until it either returns a correct response, or it returns *None* to indicate that it cannot answer the prompt successfully. The signature of the callback is:<br/>
+   `(prompt: str, state: dict[str, object], logger: logging.Logger) => bool|None`
+   
+   The `promptState` parameter is a way to pass in persistent state information to the prompt callback via a dictionary. The same dictionary will be passed in for successive calls to `promptCallback`. It is seeded with *password* and *passphrase* properties by the `authenticate` method, corresponding to the provided arguments of the same name.
+   
+   For example, to try guessing multiple passwords, one could do the following–
+   
+   ```python
+   from sys import exit
+   import ssh
+   
+   state = {
+       'passwordsToTry': ['cisco', '123456', 'password123']
+   }
+   
+   def onPrompt(prompt, state, logger):
+      
+      if 'password:' not in prompt.lower(): return None
+      
+      if len(state['passwordsToTry']) == 0: return None
+      
+      return state['passwordsToTry'].pop()
+   
+   with sisqo.SSH(host='router.example.com', username='cisco') as router:
+      
+      if not router.authenticate(promptCallback=onPrompt, promptState=state):
+      
+          exit(1)  # none of the passwords we tried worked
+      
+      # successfully authenticated using one of the three passwords we tried
+      router.write('show version')
+  ```
 
- * **method _enable_ ( _password_: str ): bool**
+ * **_read_ ( _timeout_: int?, _stripPrompt_: bool?, _promptRegex_: re? ): str**
 
-   Helper function to elevate privileges on a target device, with special handling for the "Password" prompt.
+   Reads from the target device up to the next prompt, with special handling for Cisco-style "more" pagination. If a prompt cannot be matched in the output, the read operation returns after `timeout` seconds (default: *10*). The `stripPrompt` argument can be used to control whether or not the text of the prompt is returned as part of the read operation (default: *True*). The `promptRegex` argument (default: *None*), if specified, overrides the class's `promptRegex` property.
 
-   *_Warning_: enable is not supported on certain Cisco operating systems*
+ * **_write_ ( _command_: str, _timeout_: int?, _consumeEcho_: bool? )**
 
- * **method _showRunningConfig_ ( ): Configuration**
+   Writes `command` to the target device. This function can optionally suppress the terminal's echoback. If `consumeEcho` is True (the default), this function will implicitly read up to `len(command)` bytes or until `timeout` seconds has passed (default: *10*). When manually responding to password prompts, you should set `consumeEcho` to *False* if the password is not typically echoed back to you as asterisks or otherwise.
+
+   *Warning: this function implicitly discards any previously unread data without returning it to the consumer.*
+
+ * **_enable_ ( _password_: str ): bool**
+
+   Helper function to elevate privileges on the target network gear, with special handling for the "Password" prompt.
+
+   *Warning: enable is not supported on certain Cisco-alike operating systems*
+
+ * **_showRunningConfig_ ( ): Configuration**
 
    Helper function to retrieve the target device's *running-config* and parse it into a `Configuration` object.
 
- * **method _showStartupConfig_ ( ): Configuration**
+ * **_showStartupConfig_ ( ): Configuration**
 
    Helper function to retrieve the target device's *startup-config* and parse it into a `Configuration` object.
 
-   *_Warning_: startup-config is not supported on certain Cisco operating systems*
+   *Warning: startup-config is not supported on certain Cisco-alike operating systems*
 
+ * **_disconnect_ ( )**
+
+   Closes the SSH connection with the target device, if open. Called automatically when exiting a context manager and/or when the object is garbage collected.
 
 
 ### class _Configuration_
 
-*_Note_: instances of this class are returned from `SSH.showRunningConfig()` and `SSH.showStartupConfig()`*
+*Note: instances of this class are returned from `SSH.showRunningConfig()` and `SSH.showStartupConfig()`*
 
-
- * **constructor ( _configString_: str )**
+ * **\_\_init\_\_ ( _configString_: str )**
 
    Parses a Cisco configuration file `configString` into a hierarchical, searchable representation of configuration lines.
 
- * **method _findChild_ ( _regex_: str ): Line**
+ * **_findChild_ ( _regex_: str ): Line**
 
    Searches the root node of the hierarchy for the first line that matches the provided `regex`.
 
- * **method _findChildren_ ( _regex_: str ): list[Line]**
+ * **_findChildren_ ( _regex_: str ): list[Line]**
 
    Searches the root node of the hierarchy for lines that match the provided `regex`.
 
 
 ### class _Line_
 
-*_Note_: instances of this class are returned from `Configuration.findChild()` and `Configuration.findChildren()`*
+*Note: instances of this class are returned from `Configuration.findChild()` and `Configuration.findChildren()`*
 
- * **constructor ( _number_: int, _indent_: str, _value_: str )**
+ * **\_\_init\_\_ ( _number_: int, _indent_: str, _value_: str )**
 
-   Creates a strong representation of a single line of a Cisco configuration file
+   Creates an in-memory representation of a single line of a Cisco configuration file.
 
- * **property _parent_: Line** – hierarchical parent of this configuration line
-
- * **property _children_: list[Line]** – list of hierarchical children of this configuration line
-
- * **readonly property _value_: str** – text of the configuration line, stripped of indentation
-
- * **readonly property _lineNumber_: int** – line number from the original configuration text
-
- * **readonly property _indentation_: int** – indentation level of the configuration line
-
- * **readonly property _depth_: int** – depth of this line in the configuration hierarchy
-
- * **method _findChild_ ( _regex_: str ): Line**
+ * **_findChild_ ( _regex_: str ): Line**
 
    Searches the children of this node for the first line that matches the provided `regex` and returns that line.
 
- * **method _findChildren_ ( _regex_: str ): list[Line]**
+ * **_findChildren_ ( _regex_: str ): list[Line]**
 
    Searches the children of this node for lines that match the provided `regex` and returns a list of matching lines.
+
+ * **property _value_: str**
+
+   Text of this configuration line, stripped of indentation
+
+ * **_parent_: Line**
+
+   Hierarchical parent of this configuration line
+
+ * **_children_: list[Line]**
+
+   List of hierarchical children of this configuration line
+
+ * **_lineNumber_: int**
+
+   Line number from the original configuration text
+
+ * **_indentation_: readonly int**
+
+   Indentation level of this configuration line
+
+ * **_depth_: readonly int**
+
+   Depth of this line in the configuration hierarchy
+
+
+### class _NotConnectedError_ : _Exception_
+
+Thrown when certain operations are tried on an `SSH` instance which is not connected.
+
+
+### class _NotAuthenticatedError_ : _Exception_
+
+Thrown when certain operations are tried on an `SSH` instance which has not yet authenticated.
+
+
+### class _AlreadyAuthenticatedError_ : _Exception_
+
+Thrown when authentication is tried on an `SSH` instance which has already authenticated.
+
+
+### class _BadAuthenticationError_ : _Exception_
+
+Thrown when authentication fails.

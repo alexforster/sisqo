@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ########################################################################################################################
-# Copyright © 2015 Alex Forster. All rights reserved.
+# Copyright © 2016 Alex Forster. All rights reserved.
 # This software is licensed under the 3-Clause ("New") BSD license.
 # See the LICENSE file for details.
 ########################################################################################################################
@@ -50,11 +49,17 @@ class Line:
 
         return result
 
-    def __repr__(self):
+    def __str__(self):
         """
         :rtype: str
         """
         return '\r\n'.join(self._flatten())
+
+    def __repr__(self):
+        """
+        :rtype: str
+        """
+        return '<{}>'.format(self.value)
 
     @property
     def value(self):
@@ -152,9 +157,17 @@ class Configuration:
 
         return result
 
-    def __repr__(self):
-
+    def __str__(self):
+        """
+        :rtype: str
+        """
         return '\r\n'.join(self._flatten())
+
+    def __repr__(self):
+        """
+        :rtype: str
+        """
+        return '<type Configuration>'
 
     def findChild(self, regex):
         """

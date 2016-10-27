@@ -1,2 +1,2 @@
-paramiko<2.0.0
+ptyprocess<0.6.0
 pyte<0.6.0
