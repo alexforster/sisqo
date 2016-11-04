@@ -406,7 +406,7 @@ class SSH:
             prompt = self._read(promptRegex=r'.+', stripPrompt=False)
 
             # if we appear to be authenticated...
-            if re.match(self._promptRegex, prompt, re.MULTILINE | re.IGNORECASE | re.UNICODE):
+            if re.findall(self._promptRegex, prompt, re.MULTILINE | re.IGNORECASE | re.UNICODE):
 
                 self._authenticated = True
 
