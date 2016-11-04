@@ -21,7 +21,7 @@ setup(
     maintainer='Alex Forster',
     maintainer_email='alex@alexforster.com',
     url='https://github.com/AlexForster/sisqo',
-    description='More friendly access to Cisco-style CLIs from Python',
+    description='A better library for automating network gear with Cisco-style command line interfaces',
     license='3-Clause ("New") BSD license',
     download_url='https://pypi.python.org/pypi/sisqo',
     packages=[PACKAGE_NAME],

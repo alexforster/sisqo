@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ########################################################################################################################
 # Copyright © 2016 Alex Forster. All rights reserved.
@@ -37,8 +36,8 @@ class BadAuthenticationError(Exception): pass
 def onConnectionPrompt(prompt, state, logger):
     """
     :type prompt: str
-    :type logger: logging.Logger
     :type state: dict[str, object]
+    :type logger: logging.Logger
     :rtype: str|None
     """
 
@@ -94,6 +93,7 @@ class SSH:
 
     def __init__(self, username, host, port=22, sshConfigFile=None):
         """
+        :type username: str
         :type host: str
         :type port: int
         :type sshConfigFile: str|None
@@ -164,7 +164,9 @@ class SSH:
 
     @property
     def promptRegex(self):
-
+        """
+        :rtype: str
+        """
         return self._promptRegex
 
     @promptRegex.setter
@@ -174,7 +176,9 @@ class SSH:
 
     @property
     def moreRegex(self):
-
+        """
+        :rtype: str
+        """
         return self._moreRegex
 
     @moreRegex.setter
@@ -213,8 +217,8 @@ class SSH:
     def _read(self, timeout=10, stripPrompt=True, promptRegex=None):
         """
         :type timeout: int
-        :type promptRegex: str|None
         :type stripPrompt: bool
+        :type promptRegex: str|None
         :rtype: str
         """
 
@@ -308,8 +312,8 @@ class SSH:
     def read(self, timeout=10, stripPrompt=True, promptRegex=None):
         """
         :type timeout: int
-        :type promptRegex: str|None
         :type stripPrompt: bool
+        :type promptRegex: str|None
         :rtype: str
         """
 
@@ -320,6 +324,7 @@ class SSH:
     def _write(self, command, timeout=10, consumeEcho=True):
         """
         :type command: str
+        :type timeout: int
         :type consumeEcho: bool
         """
 
@@ -368,12 +373,13 @@ class SSH:
     def write(self, command, timeout=10, consumeEcho=True):
         """
         :type command: str
+        :type timeout: int
         :type consumeEcho: bool
         """
 
         self._assertConnectionState(connected=True, authenticated=True)
 
-        return self._write(command, timeout=timeout, consumeEcho=consumeEcho)
+        self._write(command, timeout=timeout, consumeEcho=consumeEcho)
 
     def authenticate(self, password=None, passphrase=None, promptCallback=onConnectionPrompt, promptState=None):
         """
