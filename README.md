@@ -20,7 +20,7 @@ Sisqo is a better library for automating network gear with Cisco-style command l
 
 `pip install sisqo` 
 
-**PyPI:** [https://pypi.python.org/pypi/sisqo/2.0.0](https://pypi.python.org/pypi/sisqo/2.0.0)
+**PyPI:** [https://pypi.python.org/pypi/sisqo/2.0.1](https://pypi.python.org/pypi/sisqo/2.0.1)
 
 **Dependencies:**
 
