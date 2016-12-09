@@ -11,7 +11,7 @@ from setuptools import setup
 
 
 PACKAGE_NAME = 'sisqo'
-PACKAGE_VERSION = '2.0.1'
+PACKAGE_VERSION = '2.0.2'
 
 setup(
     name=PACKAGE_NAME,
