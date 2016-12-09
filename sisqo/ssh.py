@@ -438,7 +438,7 @@ class SSH:
 
         self.write('enable')
 
-        prompt = self.read(promptRegex=r'^Password:.*$', stripPrompt=False).lower()
+        prompt = self.read(promptRegex=r'^.*password:.*$', stripPrompt=False).lower()
 
         if 'password:' not in prompt.lower():
 
