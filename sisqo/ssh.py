@@ -293,7 +293,7 @@ class SSH:
 
             lines.append(line)
 
-        result = '\n'.join(lines).strip('\n')
+        result = '\n'.join(lines)
 
         rend = time.time()
 
