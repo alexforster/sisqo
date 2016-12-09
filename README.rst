@@ -28,7 +28,7 @@ Sisqo
 
 ``pip install sisqo``
 
-**PyPI:** https://pypi.python.org/pypi/sisqo/2.0.2
+**PyPI:** https://pypi.python.org/pypi/sisqo/2.0.3
 
 **Dependencies:**
 
