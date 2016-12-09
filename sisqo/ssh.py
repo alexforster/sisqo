@@ -65,7 +65,7 @@ def onConnectionPrompt(prompt, state, logger):
             state['triedKeys'][key] = True
             state['triedPassword'] = False
 
-            logger.info('Trying key \'{}\''.format(key))
+            logger.debug('Trying key \'{}\''.format(key))
 
             return state['passphrase']
 
@@ -80,6 +80,8 @@ def onConnectionPrompt(prompt, state, logger):
 
             state['triedPassword'] = True
             state['triedKeys'] = {}
+
+            logger.debug('Trying password')
 
             return state['password']
 
@@ -293,7 +295,7 @@ class SSH:
 
             lines.append(line)
 
-        result = '\n'.join(lines).strip('\n')
+        result = '\r\n'.join(lines)
 
         rend = time.time()
 
@@ -321,7 +323,7 @@ class SSH:
 
         return self._read(timeout=timeout, promptRegex=promptRegex, stripPrompt=stripPrompt)
 
-    def _write(self, command, timeout=10, consumeEcho=True):
+    def _write(self, command, timeout=10, consumeEcho=True, mask=False):
         """
         :type command: str
         :type timeout: int
@@ -340,9 +342,10 @@ class SSH:
 
         if not command.endswith('\n'):
 
-            command += '\n'
+            command.rstrip('\r\n')
+            command += '\r\n'
 
-        self._send(command)
+        self._send(command, mask=mask)
 
         if not consumeEcho:
 
@@ -426,7 +429,7 @@ class SSH:
 
                 break
 
-            self._write(result, consumeEcho=False)
+            self._write(result, consumeEcho=False, mask=True)
 
         return self._authenticated
 
@@ -480,11 +483,11 @@ class SSH:
 
         return Configuration(result)
 
-    def _send(self, value):
+    def _send(self, value, mask=False):
         """
         :type value: str
         """
-        self._log.debug('SEND: ' + repr(value))
+        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value) if mask else value))
         self._pty.write(value)
 
     def _recv(self, nr=1024):
