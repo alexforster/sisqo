@@ -131,7 +131,7 @@ class SSH:
         args.extend(optionsSpec)
         args.extend(userHostSpec)
 
-        self._log.info(' '.join(args))
+        self._log.debug(' '.join(args))
 
         self._pty = PtyProcess.spawn(args, dimensions=(SSH.SCREEN_HEIGHT, SSH.SCREEN_WIDTH), env={'TERM': 'vt100'})
         """:type: ptyprocess.PtyProcess"""
@@ -259,7 +259,7 @@ class SSH:
 
             except EOFError:
 
-                self._log.info('EOF received')
+                self._log.debug('EOF received')
                 eof = True
                 break
 
@@ -293,13 +293,13 @@ class SSH:
 
             lines.append(line)
 
-        result = '\n'.join(lines)
+        result = '\n'.join(lines).strip('\n')
 
         rend = time.time()
 
         if rend-rstart >= 1:
 
-            self._log.info('Rendered {} lines ({} chars) in {:.2f}s'.format(len(lines), len(result), rend-rstart))
+            self._log.debug('Rendered {} lines ({} chars) in {:.2f}s'.format(len(lines), len(result), rend-rstart))
 
         self._readSinceWrite = True
 
@@ -413,6 +413,8 @@ class SSH:
 
             # if we appear to be authenticated...
             if re.findall(self._promptRegex, prompt, re.MULTILINE | re.IGNORECASE | re.UNICODE):
+
+                self._log.info('Authenticated to {}'.format(self.host))
 
                 self._authenticated = True
 
