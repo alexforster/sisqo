@@ -295,7 +295,7 @@ class SSH:
 
             lines.append(line)
 
-        result = '\r\n'.join(lines)
+        result = '\n'.join(lines)
 
         rend = time.time()
 
@@ -343,7 +343,7 @@ class SSH:
         if not command.endswith('\n'):
 
             command.rstrip('\r\n')
-            command += '\r\n'
+            command += '\n'
 
         self._send(command, mask=mask)
 
