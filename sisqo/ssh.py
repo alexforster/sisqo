@@ -280,7 +280,7 @@ class SSH:
             if datetime.utcnow() > deadline:
 
                 self._log.info('Read timeout; could not match prompt regex or more pagination regex. ' +
-                               'Last regex match attempted: {}'.format(line))
+                               'Last regex match attempted against this: {}'.format(repr(line)))
                 break
 
         lines = []
@@ -301,7 +301,7 @@ class SSH:
 
         if rend-rstart >= 1:
 
-            self._log.debug('Rendered {} lines ({} chars) in {:.2f}s'.format(len(lines), len(result), rend-rstart))
+            self._log.debug('Performance warning: rendered {} lines ({} chars) in {:.2f}s'.format(len(lines), len(result), rend-rstart))
 
         self._readSinceWrite = True
 
@@ -487,7 +487,7 @@ class SSH:
         """
         :type value: str
         """
-        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value) if mask else value))
+        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value) if mask else repr(value)))
         self._pty.write(value)
 
     def _recv(self, nr=1024):
