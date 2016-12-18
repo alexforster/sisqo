@@ -43,7 +43,7 @@ def onConnectionPrompt(prompt, state, logger):
 
     prompt = prompt.lower()
 
-    state.setdefault('triedPassword', False)
+    state.setdefault('triedPassword', 0)
 
     state.setdefault('triedKeys', {})
 
@@ -53,17 +53,17 @@ def onConnectionPrompt(prompt, state, logger):
         if key is None or len(key) != 1: key = '???'
         else: key = key[0]
 
-        state['triedKeys'].setdefault(key, False)
+        state['triedKeys'].setdefault(key, 0)
 
-        if state['triedKeys'][key]:
+        if state['triedKeys'][key] > 2:
 
-            logger.error('Connect failed: incorrect passphrase')
+            logger.error('Connect failed: incorrect passphrase (after 3 attempts)')
             return None
 
         else:
 
-            state['triedKeys'][key] = True
-            state['triedPassword'] = False
+            state['triedKeys'][key] += 1
+            state['triedPassword'] = 0  # reset password failed attempts after successful passphrase
 
             logger.debug('Trying key \'{}\''.format(key))
 
@@ -71,15 +71,15 @@ def onConnectionPrompt(prompt, state, logger):
 
     if 'password:' in prompt:
 
-        if state['triedPassword']:
+        if state['triedPassword'] > 2:
 
-            logger.error('Connect failed: incorrect password')
+            logger.error('Connect failed: incorrect password (after 3 attempts)')
             return None
 
         else:
 
-            state['triedPassword'] = True
-            state['triedKeys'] = {}
+            state['triedPassword'] += 1
+            state['triedKeys'] = {}  # reset passphrase failed attempts after successful password
 
             logger.debug('Trying password')
 
