@@ -124,7 +124,7 @@ class SSH:
 
         sshConfigSpec = ['-F', self._sshConfigFile] if self._sshConfigFile else []
         portSpec = ['-p', self._port] if self._port and self._port != 22 else []
-        optionsSpec = ['-oStrictHostKeyChecking=no', '-oConnectTimeout=5'] if not self._sshConfigFile else []
+        optionsSpec = ['-oStrictHostKeyChecking=no', '-oConnectTimeout=10'] if not self._sshConfigFile else []
         userHostSpec = [(username + '@' if username else '') + self._host]
 
         args = ['ssh']
