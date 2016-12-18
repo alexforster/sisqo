@@ -28,15 +28,15 @@ Sisqo
 
 ``pip install sisqo``
 
-**GitHub:** https://github.com/alexforster/sisqo/tree/v2.0.5
-**PyPI:** https://pypi.python.org/pypi/sisqo/2.0.5
+| **GitHub:** https://github.com/alexforster/sisqo/tree/v2.0.6
+| **PyPI:** https://pypi.python.org/pypi/sisqo/2.0.6
 
 **Dependencies:**
 
--  ``ptyprocess`` – a library for launching a subprocess in a pseudo
-   terminal (pty)
--  ``pyte`` – an in memory VTXXX-compatible terminal emulator library
--  ``wcwidth`` – a library for wide-character width calculation
+- ``ptyprocess`` – a library for launching a subprocess in a pseudo terminal (pty)
+- ``pyte`` – an in memory VTXXX-compatible terminal emulator library
+
+  - ``wcwidth`` – a library for wide-character width calculation
 
 Example Code
 ------------
