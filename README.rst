@@ -28,8 +28,8 @@ Sisqo
 
 ``pip install sisqo``
 
-| **GitHub:** https://github.com/alexforster/sisqo/tree/v2.0.6
-| **PyPI:** https://pypi.python.org/pypi/sisqo/2.0.6
+| **GitHub:** https://github.com/alexforster/sisqo/tree/v2.0.7
+| **PyPI:** https://pypi.python.org/pypi/sisqo/2.0.7
 
 **Dependencies:**
 
