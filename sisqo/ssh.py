@@ -6,11 +6,12 @@
 #
 
 
+import os
 import time
 import logging
 import traceback
 import re
-from select import select
+import select
 
 from datetime import datetime, timedelta
 
@@ -255,10 +256,6 @@ class SSH:
 
                     continue
 
-                else:
-
-                    time.sleep(0.01)
-
             except EOFError:
 
                 self._log.debug('EOF received')
@@ -370,8 +367,6 @@ class SSH:
             elif datetime.utcnow() > deadline:
 
                 break
-
-            time.sleep(0.01)
 
     def write(self, command, timeout=10, consumeEcho=True):
         """
@@ -487,7 +482,7 @@ class SSH:
         """
         :type value: str
         """
-        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value) if mask else repr(value)))
+        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value)) if mask else repr(value))
         self._pty.write(value)
 
     def _recv(self, nr=1024):
@@ -495,9 +490,10 @@ class SSH:
         :type nr: int
         :rtype: str
         """
-        canRead = self._pty.fd in select([self._pty.fd], [], [], 0.1)[0]
-        if not canRead: return None
-        result = self._pty.read(nr)
+        poller = select.poll()
+        poller.register(self._pty.fd, select.POLLIN | select.POLLPRI)
+        if len(poller.poll(0.05)) == 0: return None
+        result = os.read(self._pty.fd, nr)
         self._log.debug('RECV: ' + repr(result))
         return result
 
