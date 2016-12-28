@@ -11,9 +11,9 @@ import time
 import logging
 import traceback
 import re
-import select
 
 from datetime import datetime, timedelta
+from select import select
 
 from ptyprocess import PtyProcess
 from pyte.streams import ByteStream
@@ -490,9 +490,8 @@ class SSH:
         :type nr: int
         :rtype: str
         """
-        poller = select.poll()
-        poller.register(self._pty.fd, select.POLLIN | select.POLLPRI)
-        if len(poller.poll(0.05)) == 0: return None
+        canRead = self._pty.fd in select([self._pty.fd], [], [], 0.1)[0]
+        if not canRead: return None
         result = os.read(self._pty.fd, nr)
         self._log.debug('RECV: ' + repr(result))
         return result
