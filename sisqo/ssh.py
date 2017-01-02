@@ -503,7 +503,7 @@ class SSH:
         result = os.read(self._pty.fd, nr)
 
         self._log.debug('RECV: ' + repr(result))
-        
+
         return result
 
     def _formatException(self, exception, message):
