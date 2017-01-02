@@ -482,7 +482,11 @@ class SSH:
         """
         :type value: str
         """
+
+        self._assertConnectionState(connected=True)
+
         self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value)) if mask else repr(value))
+
         self._pty.write(value)
 
     def _recv(self, nr=1024):
@@ -490,10 +494,16 @@ class SSH:
         :type nr: int
         :rtype: str
         """
+
+        self._assertConnectionState(connected=True)
+
         canRead = self._pty.fd in select([self._pty.fd], [], [], 0.1)[0]
         if not canRead: return None
+
         result = os.read(self._pty.fd, nr)
+
         self._log.debug('RECV: ' + repr(result))
+        
         return result
 
     def _formatException(self, exception, message):
