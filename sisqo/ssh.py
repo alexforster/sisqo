@@ -407,7 +407,7 @@ class SSH:
 
         while True:
 
-            prompt = self._read(promptRegex=r'.+', stripPrompt=False)
+            prompt = self._read(promptRegex=r'.{5,}', stripPrompt=False)
 
             # if we appear to be authenticated...
             if re.findall(self._promptRegex, prompt, re.MULTILINE | re.IGNORECASE | re.UNICODE):
