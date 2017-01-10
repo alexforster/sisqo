@@ -59,7 +59,7 @@ class Line:
         """
         :rtype: str
         """
-        return '<{}>'.format(self.value)
+        return '<Line "{}">'.format(self.value)
 
     @property
     def value(self):
@@ -113,7 +113,7 @@ class Line:
     def findChildren(self, regex):
         """
         :type regex: str
-        :rtype: list[Line]|None
+        :rtype: list[Line]
         """
         result = []
 
@@ -167,7 +167,7 @@ class Configuration:
         """
         :rtype: str
         """
-        return '<type Configuration>'
+        return '<Configuration>'
 
     def findChild(self, regex):
         """
@@ -185,7 +185,7 @@ class Configuration:
     def findChildren(self, regex):
         """
         :type regex: str
-        :rtype: list[Line]|None
+        :rtype: list[Line]
         """
         result = []
 
