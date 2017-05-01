@@ -5,9 +5,7 @@
 # See the LICENSE file for details.
 #
 
-
 import os
-import time
 import logging
 import traceback
 import re
@@ -58,7 +56,7 @@ def onConnectionPrompt(prompt, state, logger):
 
         if state['triedKeys'][key] > 2:
 
-            logger.error('Connect failed: incorrect passphrase (after 3 attempts)')
+            logger.error('incorrect passphrase (after 3 attempts)')
             return None
 
         else:
@@ -66,7 +64,7 @@ def onConnectionPrompt(prompt, state, logger):
             state['triedKeys'][key] += 1
             state['triedPassword'] = 0  # reset password failed attempts after successful passphrase
 
-            logger.debug('Trying key \'{}\''.format(key))
+            logger.debug('trying key \'{}\''.format(key))
 
             return state['passphrase']
 
@@ -74,7 +72,7 @@ def onConnectionPrompt(prompt, state, logger):
 
         if state['triedPassword'] > 2:
 
-            logger.error('Connect failed: incorrect password (after 3 attempts)')
+            logger.error('incorrect password (after 3 attempts)')
             return None
 
         else:
@@ -82,7 +80,7 @@ def onConnectionPrompt(prompt, state, logger):
             state['triedPassword'] += 1
             state['triedKeys'] = {}  # reset passphrase failed attempts after successful password
 
-            logger.debug('Trying password')
+            logger.debug('trying password')
 
             return state['password']
 
@@ -94,7 +92,7 @@ class SSH:
     SCREEN_WIDTH = 512
     SCREEN_HEIGHT = 256
 
-    def __init__(self, username, host, port=22, sshConfigFile=None):
+    def __init__(self, username, host, port=22, sshConfigFile=None, timeout=10):
         """
         :type username: str
         :type host: str
@@ -112,10 +110,12 @@ class SSH:
         """:type: int"""
         self._sshConfigFile = str(sshConfigFile) if sshConfigFile else None
         """:type: str|None"""
+        self._timeout = int(timeout)
+        """:type: int"""
 
         self._promptRegex = r'^[^\s]+[>#]\s?$'
         """:type: str"""
-        self._moreRegex = r'^.*-+\s*more\s*-+.*$'
+        self._moreRegex = r'^.*-+.*more.*-+.*$'
         """:type: str"""
 
         self._authenticated = False
@@ -125,7 +125,8 @@ class SSH:
 
         sshConfigSpec = ['-F', self._sshConfigFile] if self._sshConfigFile else []
         portSpec = ['-p', self._port] if self._port and self._port != 22 else []
-        optionsSpec = ['-oStrictHostKeyChecking=no', '-oConnectTimeout=10'] if not self._sshConfigFile else []
+        optionsSpec = ['-oStrictHostKeyChecking=no', '-oConnectTimeout={}'.format(self._timeout)] \
+                      if not self._sshConfigFile else []
         userHostSpec = [(username + '@' if username else '') + self._host]
 
         args = ['ssh']
@@ -134,7 +135,7 @@ class SSH:
         args.extend(optionsSpec)
         args.extend(userHostSpec)
 
-        self._log.debug(' '.join(args))
+        self._log.debug('{}: {}'.format(self._host+':'+str(self._port), ' '.join(args)))
 
         self._pty = PtyProcess.spawn(args, dimensions=(SSH.SCREEN_HEIGHT, SSH.SCREEN_WIDTH), env={'TERM': 'vt100'})
         """:type: ptyprocess.PtyProcess"""
@@ -149,7 +150,7 @@ class SSH:
         """
         :rtype: str
         """
-        return '<type SSH host:{} port:{}>'.format(self._host, self._port)
+        return '<SSH host="{}" port={}>'.format(self._host, self._port)
 
     @property
     def host(self):
@@ -215,11 +216,11 @@ class SSH:
 
             self._readSinceWrite = False
 
-            self._log.info('Disconnected from {}'.format(self.host))
+            self._log.info('{}: disconnected'.format(self._host+':'+str(self._port)))
 
-    def _read(self, timeout=10, stripPrompt=True, promptRegex=None):
+    def _read(self, timeout=None, stripPrompt=True, promptRegex=None):
         """
-        :type timeout: int
+        :type timeout: int|None
         :type stripPrompt: bool
         :type promptRegex: str|None
         :rtype: str
@@ -231,7 +232,7 @@ class SSH:
 
             promptRegex = self.promptRegex
 
-        deadline = datetime.utcnow() + timedelta(seconds=timeout)
+        deadline = datetime.utcnow() + timedelta(seconds=timeout or self._timeout)
 
         eof = False
         self._vt.reset()
@@ -244,7 +245,7 @@ class SSH:
 
                 if read is not None:
 
-                    deadline = datetime.utcnow() + timedelta(seconds=timeout)
+                    deadline = datetime.utcnow() + timedelta(seconds=timeout or self._timeout)
 
                     self._stream.feed(read)
 
@@ -258,7 +259,7 @@ class SSH:
 
             except EOFError:
 
-                self._log.debug('EOF received')
+                self._log.debug('{}: EOF received'.format(self._host+':'+str(self._port)))
                 eof = True
                 break
 
@@ -276,13 +277,11 @@ class SSH:
 
             if datetime.utcnow() > deadline:
 
-                self._log.info('Read timeout; could not match prompt regex or more pagination regex. ' +
-                               'Last regex match attempted against this: {}'.format(repr(line)))
+                self._log.info('{}: Read timeout; could not match prompt regex or more pagination regex. ' +
+                   'Last regex match attempted against this: {}'.format(self._host+':'+str(self._port), repr(line)))
                 break
 
         lines = []
-
-        rstart = time.time()
 
         for line in [l.rstrip() for l in self._vt.display[0:self._vt.cursor.y+1]]:
 
@@ -294,12 +293,6 @@ class SSH:
 
         result = '\n'.join(lines)
 
-        rend = time.time()
-
-        if rend-rstart >= 1:
-
-            self._log.debug('Performance warning: rendered {} lines ({} chars) in {:.2f}s'.format(len(lines), len(result), rend-rstart))
-
         self._readSinceWrite = True
 
         if eof:
@@ -308,9 +301,9 @@ class SSH:
 
         return result
 
-    def read(self, timeout=10, stripPrompt=True, promptRegex=None):
+    def read(self, timeout=None, stripPrompt=True, promptRegex=None):
         """
-        :type timeout: int
+        :type timeout: int|None
         :type stripPrompt: bool
         :type promptRegex: str|None
         :rtype: str
@@ -318,12 +311,12 @@ class SSH:
 
         self._assertConnectionState(connected=True, authenticated=True)
 
-        return self._read(timeout=timeout, promptRegex=promptRegex, stripPrompt=stripPrompt)
+        return self._read(timeout=timeout or self._timeout, promptRegex=promptRegex, stripPrompt=stripPrompt)
 
-    def _write(self, command, timeout=10, consumeEcho=True, mask=False):
+    def _write(self, command, timeout=None, consumeEcho=True, mask=False):
         """
         :type command: str
-        :type timeout: int
+        :type timeout: int|None
         :type consumeEcho: bool
         """
 
@@ -352,7 +345,7 @@ class SSH:
 
         readLen = len(command)
 
-        deadline = datetime.utcnow() + timedelta(seconds=timeout)
+        deadline = datetime.utcnow() + timedelta(seconds=timeout or self._timeout)
 
         while readLen > 0:
 
@@ -360,7 +353,7 @@ class SSH:
 
             if recvd is not None:
 
-                deadline = datetime.utcnow() + timedelta(seconds=timeout)
+                deadline = datetime.utcnow() + timedelta(seconds=timeout or self._timeout)
                 self._stream.feed(recvd)
                 readLen -= len(recvd)
 
@@ -368,16 +361,16 @@ class SSH:
 
                 break
 
-    def write(self, command, timeout=10, consumeEcho=True):
+    def write(self, command, timeout=None, consumeEcho=True):
         """
         :type command: str
-        :type timeout: int
+        :type timeout: int|None
         :type consumeEcho: bool
         """
 
         self._assertConnectionState(connected=True, authenticated=True)
 
-        self._write(command, timeout=timeout, consumeEcho=consumeEcho)
+        self._write(command, timeout=timeout or self._timeout, consumeEcho=consumeEcho)
 
     def authenticate(self, password=None, passphrase=None, promptCallback=onConnectionPrompt, promptState=None):
         """
@@ -393,7 +386,7 @@ class SSH:
 
         except Exception as ex:
 
-            self._log.error(self._formatException(ex, 'Could not connect to the remote host'))
+            self._log.error(self._formatException(ex, '{}: could not connect'.format(self._host+':'+str(self._port))))
             return False
 
         state = {
@@ -412,7 +405,7 @@ class SSH:
             # if we appear to be authenticated...
             if re.findall(self._promptRegex, prompt, re.MULTILINE | re.IGNORECASE | re.UNICODE):
 
-                self._log.info('Authenticated to {}'.format(self.host))
+                self._log.info('{}: authenticated'.format(self._host+':'+str(self._port)))
 
                 self._authenticated = True
 
@@ -442,19 +435,19 @@ class SSH:
 
         if 'password:' not in prompt.lower():
 
-            self._log.warn('Remote did not prompt for an enable password')
+            self._log.warn('{}: remote did not prompt for an enable password'.format(self._host+':'+str(self._port)))
             return True
 
         self.write(password, consumeEcho=False)
 
         passwordResult = self.read(stripPrompt=False).lower()
 
-        if 'password:' in passwordResult.lower():
+        if 'password:' in passwordResult.lower() or 'denied' in passwordResult.lower():
 
-            self._log.error('Enable failed: incorrect password')
+            self._log.error('{}: enable failed: incorrect password'.format(self._host+':'+str(self._port)))
             return False
 
-        self._log.info('Enabled on {}'.format(self.host))
+        self._log.info('{}: enabled'.format(self._host+':'+str(self._port)))
 
         return True
 
@@ -485,7 +478,8 @@ class SSH:
 
         self._assertConnectionState(connected=True)
 
-        self._log.debug('SEND: ' + repr(re.sub(r'[^\r\n]', '*', value)) if mask else repr(value))
+        self._log.debug('{} <SEND> {}'.format(
+            self._host+':'+str(self._port), repr(re.sub(r'[^\r\n]', '*', value)) if mask else repr(value)))
 
         self._pty.write(value)
 
@@ -502,7 +496,7 @@ class SSH:
 
         result = os.read(self._pty.fd, nr)
 
-        self._log.debug('RECV: ' + repr(result))
+        self._log.debug('{} <RECV> {}'.format(self._host+':'+str(self._port), repr(result)))
 
         return result
 
@@ -531,16 +525,16 @@ class SSH:
 
             if not self._pty or not self._pty.isalive():
 
-                raise NotConnectedError('No SSH connection is established')
+                raise NotConnectedError('{}: no SSH connection is established'.format(self._host+':'+str(self._port)))
 
         if authenticated == True:
 
             if not self._authenticated:
 
-                raise NotAuthenticatedError('This SSH connection has not authenticated')
+                raise NotAuthenticatedError('{}: SSH connection has not authenticated'.format(self._host+':'+str(self._port)))
 
         elif authenticated == False:
 
             if self._authenticated:
 
-                raise AlreadyAuthenticatedError('This SSH connection has already authenticated')
+                raise AlreadyAuthenticatedError('{}: SSH connection has already authenticated'.format(self._host+':'+str(self._port)))

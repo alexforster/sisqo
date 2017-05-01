@@ -6,12 +6,11 @@
 # See the LICENSE file for details.
 #
 
-
 from setuptools import setup
 
 
 PACKAGE_NAME = 'sisqo'
-PACKAGE_VERSION = '2.0.10'
+PACKAGE_VERSION = '2.0.11'
 
 setup(
     name=PACKAGE_NAME,

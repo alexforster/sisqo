@@ -5,7 +5,6 @@
 # See the LICENSE file for details.
 #
 
-
-from ssh import SSH
+from ssh import SSH, NotConnectedError, NotAuthenticatedError, AlreadyAuthenticatedError, BadAuthenticationError
 from configuration import Configuration, Line
 
