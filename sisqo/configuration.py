@@ -9,7 +9,7 @@
 import re
 
 
-class Line:
+class Line(object):
 
     def __init__(self, lineNumber, indent, value):
         """
@@ -19,9 +19,9 @@ class Line:
         """
         self._lineNumber = int(lineNumber) if lineNumber else None
 
-        self._indent = str(indent) if indent else ''
+        self._indent = indent or ''
 
-        self._value = str(value) if value else None
+        self._value = value or None
 
         self.parent = None
 
@@ -126,7 +126,7 @@ class Line:
         return result
 
 
-class Configuration:
+class Configuration(object):
 
     def __init__(self, configString):
         """
@@ -135,7 +135,7 @@ class Configuration:
         self._root = []
         self._parserStack = []
 
-        configString = str(configString) if configString else None
+        configString = configString or None
 
         if configString is None: return
 
