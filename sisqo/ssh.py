@@ -124,8 +124,10 @@ class SSH(object):
         """:type: int"""
         self._sshOptions = sshOptions or []
         """:type: list"""
-        self._log = SSH.LoggerAdapter(self._host, logger or logging.getLogger('sisqo').addHandler(logging.NullHandler()))
+        self._log = logger or logging.getLogger('sisqo')
         """:type: logging.Logger"""
+        self._log.addHandler(logging.NullHandler())
+        self._log = SSH.LoggerAdapter(self._host, self._log)
 
         self._promptRegex = r'^[^\s]+[>#]\s?$'
         """:type: str"""
